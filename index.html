@@ -167,6 +167,7 @@ function initialState() {
     moves: [],          // remaining pip values
     rolled: false,
     winner: null,
+    seq: 0,             // bumped on every local mutation to detect stale remote echoes
   };
 }
 
@@ -253,9 +254,20 @@ function applyRemote(row) {
     if ($('gameScreen').style.display === 'none') enterGame();
   }
   if (row.status === 'playing' && state) {
-    // merge state (ignore our own optimistic updates that are identical)
-    state = row.state;
-    renderGame();
+    // Only accept remote state if it's strictly newer than our local state.
+    // This prevents a poll that fetches pre-push data from clobbering an
+    // optimistic local move.
+    const localSeq  = state.seq  || 0;
+    const remoteSeq = (row.state && row.state.seq) || 0;
+    if (remoteSeq > localSeq) {
+      state = row.state;
+      renderGame();
+    } else if (remoteSeq === localSeq && state.turn !== myColor) {
+      // Opponent's turn, same seq — safe to re-sync (no local edits in flight).
+      state = row.state;
+      renderGame();
+    }
+    // else: our local state is ahead; ignore stale remote echo.
   }
   if (row.state && row.state.winner) {
     const msg = row.state.winner === myColor ? "You win!" : "You lose.";
@@ -470,13 +482,26 @@ function isLegalDest(dest) {
   return legals.has(dest);
 }
 
+let flashTimer = null;
+function flash(msg) {
+  const el = $('gameStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = 'var(--bad)';
+  if (flashTimer) clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => { el.style.color=''; renderGame(); }, 1500);
+}
+
 function onPointClick(p) {
-  if (state.turn!==myColor || !state.rolled || state.winner) return;
+  if (state.winner) return;
+  if (state.turn !== myColor) { flash("Not your turn"); return; }
+  if (!state.rolled)          { flash("Roll the dice first"); return; }
   if (selected===null || selected===p) {
     // select
     if (state.bar[myColor]>0) { selected='bar'; renderGame(); return; }
     const slot = state.board[p];
-    if (slot.color===myColor && slot.count>0) { selected=p; renderGame(); }
+    if (slot.color===myColor && slot.count>0) { selected=p; renderGame(); return; }
+    flash("Select one of your checkers");
     return;
   }
   // try move
@@ -484,15 +509,21 @@ function onPointClick(p) {
   if (legals.has(p)) {
     applyMove(selected,p);
     selected=null;
-  } else {
-    // re-select if own point
-    const slot=state.board[p];
-    if (slot.color===myColor && slot.count>0 && state.bar[myColor]===0) selected=p;
-    else selected=null;
+    renderGame();
+    maybeEndTurn();
+    pushState();
+    return;
   }
-  renderGame();
-  maybeEndTurn();
-  pushState();
+  // illegal — give feedback, then re-select if own point
+  const slot=state.board[p];
+  if (slot.color===myColor && slot.count>0 && state.bar[myColor]===0) {
+    selected=p;
+    renderGame();
+  } else {
+    selected=null;
+    renderGame();
+    flash("Illegal move");
+  }
 }
 
 function onOffClick(color) {
@@ -606,14 +637,21 @@ $('btnPass').onclick = () => {
 /* ===========================================================
    Persist state
 =========================================================== */
-let pushing=false;
+let pushing=false, pendingPush=false;
 async function pushState() {
-  if (!gameId) return;
-  if (pushing) return;
-  pushing=true;
+  if (!gameId || !state) return;
+  // bump seq so remote echoes of older state don't overwrite us
+  state.seq = (state.seq || 0) + 1;
+  if (pushing) { pendingPush = true; return; }
+  pushing = true;
   try {
-    await sb.from(TABLE).update({ state, status: state.winner ? 'finished' : 'playing' }).eq('id', gameId);
-  } finally { pushing=false; }
+    do {
+      pendingPush = false;
+      await sb.from(TABLE).update({ state, status: state.winner ? 'finished' : 'playing' }).eq('id', gameId);
+    } while (pendingPush);
+  } finally {
+    pushing = false;
+  }
 }
 
 /* ===========================================================
