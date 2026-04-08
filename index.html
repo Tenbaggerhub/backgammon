@@ -1,1336 +1,630 @@
-<!DOCTYPE html>
-<!-- saved from url=(0045)file:///C:/Users/David/Downloads/index_4.html -->
-<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Backgammon</title>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Backgammon Multiplayer</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #0a0704;
-  --felt: #1b3d2a;
-  --felt-alt: #163323;
-  --wood: #3d1f08;
-  --wood-light: #5c3010;
-  --gold: #c8953a;
-  --gold-light: #e8b84b;
-  --gold-dim: rgba(200,149,58,0.35);
-  --cream: #f2ddb0;
-  --white-c: #ede0be;
-  --black-c: #1a0f05;
-  --red-point: #8b1a1a;
-  --tan-point: #b8842a;
-  --bar: #2a1505;
-  --text: #f0ddb0;
-  --muted: rgba(240,221,176,0.55);
-  --shadow: rgba(0,0,0,0.8);
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  background: var(--bg);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-family: 'EB Garamond', serif;
-  color: var(--text);
-  padding: 0;
-  overflow-x: hidden;
-}
-
-/* grain overlay */
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 999;
-  opacity: 0.4;
-}
-
-/* ===== LOBBY ===== */
-#lobby {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 32px 16px;
-  gap: 0;
-}
-
-.logo-area {
-  text-align: center;
-  margin-bottom: 48px;
-}
-
-.logo-area h1 {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(3rem, 8vw, 5rem);
-  font-weight: 900;
-  color: var(--gold-light);
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  text-shadow: 0 0 40px rgba(232,184,75,0.3), 0 4px 20px rgba(0,0,0,0.8);
-  line-height: 1;
-}
-
-.logo-area .tagline {
-  font-size: 0.9rem;
-  letter-spacing: 0.35em;
-  color: var(--gold);
-  text-transform: uppercase;
-  opacity: 0.7;
-  margin-top: 8px;
-}
-
-.lobby-card {
-  background: linear-gradient(160deg, #1a0e05, #0f0804);
-  border: 1px solid var(--gold-dim);
-  border-radius: 4px;
-  padding: 40px 48px;
-  width: 100%;
-  max-width: 420px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(200,149,58,0.15);
-}
-
-.lobby-card h2 {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.3rem;
-  color: var(--gold-light);
-  letter-spacing: 0.08em;
-  margin-bottom: 28px;
-  text-align: center;
-}
-
-.field-label {
-  font-size: 0.78rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--gold);
-  opacity: 0.75;
-  margin-bottom: 6px;
-  display: block;
-}
-
-.field-input {
-  width: 100%;
-  background: rgba(0,0,0,0.4);
-  border: 1px solid rgba(200,149,58,0.3);
-  border-radius: 3px;
-  color: var(--cream);
-  font-family: 'EB Garamond', serif;
-  font-size: 1rem;
-  padding: 10px 14px;
-  margin-bottom: 20px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.field-input:focus { border-color: var(--gold); }
-.field-input::placeholder { color: rgba(240,221,176,0.25); }
-
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 8px 0 20px;
-  color: var(--muted);
-  font-size: 0.8rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-}
-.divider::before, .divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: rgba(200,149,58,0.2);
-}
-
-.btn {
-  font-family: 'Playfair Display', serif;
-  font-size: 0.82rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  padding: 11px 24px;
-  border: 1.5px solid var(--gold);
-  background: transparent;
-  color: var(--gold-light);
-  cursor: pointer;
-  border-radius: 3px;
-  transition: all 0.2s;
-  width: 100%;
-  margin-bottom: 10px;
-}
-.btn:hover { background: rgba(200,149,58,0.12); box-shadow: 0 0 16px rgba(200,149,58,0.2); }
-.btn:active { transform: scale(0.98); }
-.btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.btn.primary { background: rgba(200,149,58,0.18); }
-.btn.sm { width: auto; padding: 8px 18px; font-size: 0.75rem; margin-bottom: 0; }
-.btn.danger { border-color: #c04040; color: #e05050; }
-.btn.danger:hover { background: rgba(192,64,64,0.12); }
-
-.join-row {
-  display: flex;
-  gap: 8px;
-}
-.join-row .field-input { margin-bottom: 0; flex: 1; }
-
-.lobby-status {
-  text-align: center;
-  margin-top: 16px;
-  font-size: 0.9rem;
-  color: var(--gold);
-  font-style: italic;
-  min-height: 20px;
-}
-
-/* waiting room */
-#waiting-room {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 32px;
-  gap: 24px;
-  text-align: center;
-}
-
-.waiting-card {
-  background: linear-gradient(160deg, #1a0e05, #0f0804);
-  border: 1px solid var(--gold-dim);
-  border-radius: 4px;
-  padding: 40px 48px;
-  max-width: 420px;
-  width: 100%;
-}
-
-.waiting-card h2 {
-  font-family: 'Playfair Display', serif;
-  color: var(--gold-light);
-  font-size: 1.5rem;
-  margin-bottom: 12px;
-  letter-spacing: 0.06em;
-}
-
-.game-code {
-  font-family: 'Playfair Display', serif;
-  font-size: 2.8rem;
-  font-weight: 700;
-  color: var(--gold-light);
-  letter-spacing: 0.3em;
-  margin: 20px 0;
-  text-shadow: 0 0 20px rgba(232,184,75,0.4);
-}
-
-.pulse-dot {
-  display: inline-block;
-  width: 10px; height: 10px;
-  background: var(--gold);
-  border-radius: 50%;
-  animation: pulse 1.4s ease-in-out infinite;
-  margin-right: 8px;
-  vertical-align: middle;
-}
-@keyframes pulse {
-  0%, 100% { opacity: 0.3; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1.2); }
-}
-
-/* ===== GAME ===== */
-#game {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  padding: 12px 12px 24px;
-  gap: 0;
-}
-
-.game-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  max-width: 780px;
-  padding: 10px 0 8px;
-}
-
-.game-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.4rem;
-  font-weight: 900;
-  color: var(--gold-light);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-
-.game-code-small {
-  font-size: 0.78rem;
-  letter-spacing: 0.18em;
-  color: var(--gold);
-  opacity: 0.6;
-  text-transform: uppercase;
-}
-
-/* player panels */
-.players-strip {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
-}
-
-.player-pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 16px 6px 10px;
-  border-radius: 40px;
-  border: 1.5px solid transparent;
-  transition: all 0.3s;
-  font-size: 0.95rem;
-}
-
-.player-pill.active {
-  border-color: var(--gold);
-  background: rgba(200,149,58,0.1);
-  box-shadow: 0 0 12px rgba(200,149,58,0.2);
-}
-
-.player-pill.you { font-style: italic; }
-
-.c-dot {
-  width: 18px; height: 18px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.c-dot.w {
-  background: radial-gradient(circle at 35% 35%, #fff8e8, #d4b870);
-  border: 1.5px solid #c8a84a;
-  box-shadow: inset 0 1px 3px rgba(255,255,255,0.5);
-}
-.c-dot.b {
-  background: radial-gradient(circle at 35% 35%, #3a2810, #0d0804);
-  border: 1.5px solid #3a2810;
-  box-shadow: inset 0 1px 3px rgba(255,255,255,0.08);
-}
-
-.status-line {
-  font-size: 1rem;
-  color: var(--gold-light);
-  text-align: center;
-  min-height: 22px;
-  margin-bottom: 8px;
-  font-style: italic;
-  letter-spacing: 0.03em;
-}
-
-/* ===== BOARD ===== */
-.board-outer {
-  border: 3px solid #6b4a18;
-  border-radius: 5px;
-  box-shadow: 0 0 0 1px rgba(200,149,58,0.15), 0 8px 40px rgba(0,0,0,0.8), inset 0 0 30px rgba(0,0,0,0.5);
-  background: var(--wood);
-  padding: 6px;
-  max-width: 100%;
-}
-
-.board-inner {
-  background: var(--felt);
-  border-radius: 2px;
-  position: relative;
-  overflow: hidden;
-}
-
-canvas#board {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  cursor: pointer;
-}
-
-/* ===== DICE ===== */
-.dice-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  margin: 12px 0 6px;
-  min-height: 52px;
-}
-
-.die-face {
-  width: 48px; height: 48px;
-  background: #f5e8cc;
-  border-radius: 9px;
-  position: relative;
-  box-shadow: 2px 3px 0 rgba(0,0,0,0.5), inset 0 0 6px rgba(0,0,0,0.08);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.2s, transform 0.15s;
-}
-
-.die-face.used { opacity: 0.25; transform: scale(0.92); }
-.die-face.rolling { animation: dieRoll 0.35s ease; }
-
-@keyframes dieRoll {
-  0% { transform: rotate(0deg) scale(1); }
-  30% { transform: rotate(20deg) scale(1.1); }
-  60% { transform: rotate(-12deg) scale(0.95); }
-  100% { transform: rotate(0deg) scale(1); }
-}
-
-.die-inner {
-  display: grid;
-  width: 36px; height: 36px;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr;
-}
-
-.dp {
-  width: 7px; height: 7px;
-  background: #1a0d04;
-  border-radius: 50%;
-  margin: auto;
-  opacity: 0;
-}
-.dp.on { opacity: 1; }
-
-/* ===== CONTROLS ===== */
-.controls-row {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin: 8px 0;
-}
-
-.ctrl-btn {
-  font-family: 'Playfair Display', serif;
-  font-size: 0.76rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  padding: 8px 20px;
-  border: 1.5px solid var(--gold);
-  background: transparent;
-  color: var(--gold-light);
-  cursor: pointer;
-  border-radius: 3px;
-  transition: all 0.2s;
-}
-.ctrl-btn:hover { background: rgba(200,149,58,0.12); }
-.ctrl-btn:disabled { opacity: 0.28; cursor: not-allowed; }
-.ctrl-btn.primary { background: rgba(200,149,58,0.18); }
-
-/* bear off */
-.bearoff-row {
-  display: flex;
-  gap: 24px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin: 6px 0 0;
-}
-.bearoff-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: var(--gold);
-}
-
-/* overlay */
-.overlay {
-  display: none;
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.87);
-  z-index: 200;
-  align-items: center;
-  justify-content: center;
-}
-.overlay.show { display: flex; }
-
-.ov-box {
-  background: linear-gradient(160deg, #1e1105, #100904);
-  border: 2px solid var(--gold);
-  border-radius: 6px;
-  padding: 44px 56px;
-  text-align: center;
-  box-shadow: 0 0 60px rgba(200,149,58,0.25);
-  animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
-  max-width: 90vw;
-}
-@keyframes popIn {
-  from { transform: scale(0.65); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-.ov-box h2 {
-  font-family: 'Playfair Display', serif;
-  font-size: 2.2rem;
-  color: var(--gold-light);
-  letter-spacing: 0.1em;
-  margin-bottom: 10px;
-}
-.ov-box p { color: var(--cream); margin-bottom: 28px; font-size: 1.1rem; }
+  :root{
+    --bg:#1b1208; --felt:#0f5132; --wood:#5b3a1e; --wood2:#7a4f29;
+    --light:#e9d7a4; --dark:#9c6b3a; --white:#f3ecd7; --black:#222;
+    --accent:#ffcc33; --bad:#c0392b;
+  }
+  *{box-sizing:border-box;font-family:system-ui,Segoe UI,Roboto,sans-serif}
+  body{margin:0;background:var(--bg);color:#eee;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px}
+  h1{margin:4px 0 12px;font-size:22px;letter-spacing:1px}
+  .panel{background:#2b1d10;border:1px solid #7a4f29;border-radius:10px;padding:16px;max-width:520px;width:100%}
+  button{background:var(--accent);border:0;color:#1b1208;font-weight:700;padding:10px 16px;border-radius:6px;cursor:pointer;font-size:14px}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  button.ghost{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+  input{padding:10px;border-radius:6px;border:1px solid #7a4f29;background:#1b1208;color:#eee;font-size:16px;width:100%;text-transform:uppercase;letter-spacing:2px;text-align:center}
+  .row{display:flex;gap:8px;margin-top:10px}
+  .code{font-family:ui-monospace,Menlo,monospace;font-size:28px;letter-spacing:6px;background:#1b1208;padding:10px;border-radius:8px;text-align:center;color:var(--accent)}
+  .status{margin:8px 0;min-height:20px;font-size:14px;color:#ddd}
+  .err{color:var(--bad)}
+  /* Board */
+  #gameScreen{width:100%;max-width:820px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:14px}
+  .board{
+    background:var(--wood);
+    border:8px solid var(--wood2);
+    border-radius:8px;
+    display:grid;
+    grid-template-columns: 30px 1fr 30px 1fr 30px;
+    grid-template-rows: 1fr 1fr;
+    height:520px;
+    gap:0;
+  }
+  .quad{background:var(--felt);display:grid;grid-template-columns:repeat(6,1fr);position:relative}
+  .bar{background:var(--wood2);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:4px 0}
+  .off{background:var(--wood2);display:flex;flex-direction:column;justify-content:space-between;padding:4px 2px}
+  .point{position:relative;display:flex;flex-direction:column;align-items:center;cursor:pointer}
+  .point.top{justify-content:flex-start}
+  .point.bot{justify-content:flex-end}
+  .point::before{
+    content:"";position:absolute;left:0;right:0;
+    border-left:calc(100% / 2 - 1px) solid transparent;
+    border-right:calc(100% / 2 - 1px) solid transparent;
+  }
+  .point.top::before{top:0;height:90%;border-top:calc(260px - 8px) solid var(--light)}
+  .point.bot::before{bottom:0;height:90%;border-bottom:calc(260px - 8px) solid var(--light)}
+  .point.top.dark::before{border-top-color:var(--dark)}
+  .point.bot.dark::before{border-bottom-color:var(--dark)}
+  .point .num{position:absolute;font-size:10px;color:#000;opacity:.6;z-index:3}
+  .point.top .num{top:2px}
+  .point.bot .num{bottom:2px}
+  .checkers{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;pointer-events:none;margin-top:2px;margin-bottom:2px}
+  .point.bot .checkers{flex-direction:column-reverse}
+  .checker{
+    width:30px;height:30px;border-radius:50%;
+    border:2px solid #000;
+    box-shadow:0 1px 2px rgba(0,0,0,.6) inset, 0 1px 2px rgba(0,0,0,.4);
+    margin:-4px 0 0 0;
+  }
+  .checker.white{background:radial-gradient(circle at 30% 30%,#fff,#c9bfa3)}
+  .checker.black{background:radial-gradient(circle at 30% 30%,#555,#111)}
+  .checker.count{display:flex;align-items:center;justify-content:center;color:#000;font-weight:700;font-size:12px;background:radial-gradient(circle at 30% 30%,#fff,#c9bfa3)}
+  .checker.count.black{color:#fff;background:radial-gradient(circle at 30% 30%,#555,#111)}
+  .point.selected::after{content:"";position:absolute;inset:0;background:rgba(255,204,51,.25);z-index:1}
+  .point.legal::after{content:"";position:absolute;inset:0;background:rgba(40,200,120,.25);z-index:1}
+  .bar-checkers{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;flex:1;justify-content:center}
+  .off-label{font-size:10px;color:#eee;text-align:center;opacity:.7}
+  .off-checkers{display:flex;flex-direction:column;align-items:center;flex:1;justify-content:center;color:#eee;font-size:12px;font-weight:700}
+  .controls{display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .dice{display:flex;gap:8px}
+  .die{width:40px;height:40px;border-radius:6px;background:#f3ecd7;color:#000;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;border:2px solid #000}
+  .die.used{opacity:.35}
+  .legend{font-size:12px;color:#ccc}
+  .turnbadge{padding:4px 10px;border-radius:20px;font-weight:700;font-size:12px}
+  .turnbadge.white{background:#f3ecd7;color:#000}
+  .turnbadge.black{background:#222;color:#fff;border:1px solid #666}
+  @media (max-width:640px){
+    .board{height:380px}
+    .checker{width:22px;height:22px}
+    .point.top::before{border-top-width:180px}
+    .point.bot::before{border-bottom-width:180px}
+  }
 </style>
 </head>
 <body>
+<h1>BACKGAMMON MULTIPLAYER</h1>
 
-<!-- LOBBY -->
-<div id="lobby">
-  <div class="logo-area">
-    <h1>Backgammon</h1>
-    <div class="tagline">Two Players · Real Time</div>
-  </div>
-  <div class="lobby-card">
-    <h2>Enter Your Name</h2>
-    <label class="field-label">Your name</label>
-    <input class="field-input" id="player-name" placeholder="e.g. David" maxlength="20">
-
-    <button class="btn primary" onclick="createGame()">Create New Game</button>
-
-    <div class="divider">or join</div>
-
-    <div class="join-row">
-      <input class="field-input" id="join-code" placeholder="Game code" maxlength="6" style="text-transform:uppercase">
-      <button class="btn sm" onclick="joinGame()">Join</button>
+<!-- Lobby -->
+<div id="lobby" class="panel">
+  <div id="lobbyMain">
+    <button id="btnCreate" style="width:100%">Create new game</button>
+    <div class="row">
+      <input id="joinCode" maxlength="6" placeholder="CODE" />
+      <button id="btnJoin">Join</button>
     </div>
-
-    <div class="lobby-status" id="lobby-status"></div>
+    <div id="lobbyStatus" class="status"></div>
+  </div>
+  <div id="waiting" style="display:none">
+    <div class="legend">Game code — share with your opponent:</div>
+    <div id="gameCode" class="code">------</div>
+    <div class="status">Waiting for opponent to join…</div>
+    <button id="btnCancel" class="ghost" style="width:100%">Cancel</button>
   </div>
 </div>
 
-<!-- WAITING ROOM -->
-<div id="waiting-room">
-  <div class="waiting-card">
-    <h2>Game Created!</h2>
-    <p style="color:var(--muted);font-size:0.95rem">Share this code with your opponent:</p>
-    <div class="game-code" id="display-code">——</div>
-    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:24px"><span class="pulse-dot"></span>Waiting for opponent to join…</p>
-    <button class="btn danger sm" onclick="cancelGame()" style="width:100%">Cancel</button>
+<!-- Game -->
+<div id="gameScreen" class="panel" style="display:none">
+  <div class="topbar">
+    <div>Code: <strong id="gCode" style="color:var(--accent);letter-spacing:3px"></strong></div>
+    <div>You: <span id="youBadge" class="turnbadge white">WHITE</span></div>
+    <div>Turn: <span id="turnBadge" class="turnbadge white">WHITE</span></div>
   </div>
+  <div id="board" class="board"></div>
+  <div class="controls">
+    <button id="btnRoll">Roll dice</button>
+    <div class="dice" id="dice"></div>
+    <button id="btnPass" class="ghost">Pass / end turn</button>
+    <span id="gameStatus" class="status" style="flex:1;text-align:right"></span>
+  </div>
+  <div class="legend">White moves 24→1. Black moves 1→24. Click a point to select, then click a destination.</div>
 </div>
 
-<!-- GAME -->
-<div id="game">
-  <div class="game-header">
-    <div class="game-title">Backgammon</div>
-    <div class="game-code-small" id="game-code-display"></div>
-  </div>
-
-  <div class="players-strip">
-    <div class="player-pill" id="pill-white">
-      <div class="c-dot w"></div>
-      <span id="name-white">White</span>
-    </div>
-    <div style="color:var(--gold);opacity:0.4">◆</div>
-    <div class="player-pill" id="pill-black">
-      <div class="c-dot b"></div>
-      <span id="name-black">Black</span>
-    </div>
-  </div>
-
-  <div class="status-line" id="status-line">Loading…</div>
-
-  <div class="board-outer">
-    <div class="board-inner">
-      <canvas id="board" width="740" height="500"></canvas>
-    </div>
-  </div>
-
-  <div class="dice-row" id="dice-row"></div>
-
-  <div class="controls-row">
-    <button class="ctrl-btn primary" id="btn-roll" onclick="doRoll()" disabled="">Roll Dice</button>
-    <button class="ctrl-btn" id="btn-end" onclick="doEndTurn()" disabled="">End Turn</button>
-    <button class="ctrl-btn" onclick="leaveGame()">Leave</button>
-  </div>
-
-  <div class="bearoff-row">
-    <div class="bearoff-label">
-      <div class="c-dot w" style="width:14px;height:14px"></div>
-      <span id="bo-white">Borne off: 0</span>
-    </div>
-    <div class="bearoff-label">
-      <div class="c-dot b" style="width:14px;height:14px"></div>
-      <span id="bo-black">Borne off: 0</span>
-    </div>
-  </div>
-</div>
-
-<!-- WIN OVERLAY -->
-<div class="overlay" id="win-overlay">
-  <div class="ov-box">
-    <h2 id="win-title">Victory!</h2>
-    <p id="win-msg"></p>
-    <button class="btn" onclick="leaveGame()">Back to Lobby</button>
-  </div>
+<!-- Game over -->
+<div id="overScreen" class="panel" style="display:none;text-align:center">
+  <h2 id="winnerText"></h2>
+  <button onclick="location.reload()" style="width:100%">New game</button>
 </div>
 
 <script>
-// ─── SUPABASE ────────────────────────────────────────────────────────────────
-const SUPABASE_URL = 'https://jzxvvngyezybhqqumbmd.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_ixngkc4AUnG-9IjRdpL_Ew_LNjI7NNN';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* ===========================================================
+   Supabase
+=========================================================== */
+const SUPA_URL = "https://jzxvvngyezybhqqumbmd.supabase.co";
+const SUPA_KEY = "sb_publishable_ixngkc4AUnG-9IjRdpL_Ew_LNjI7NNN";
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+const TABLE = "backgammon_games";
 
-// ─── STATE ───────────────────────────────────────────────────────────────────
-let myName = '';
-let myColor = null;        // 'white' | 'black'
-let gameId = null;
-let gameCode = null;
-let gameState = null;
-let selectedPoint = null;  // index 0-25 (24=bar-white,25=bar-black)
-let subscription = null;
-let moveHistory = [];
+/* ===========================================================
+   Game state
+=========================================================== */
+let myColor = null;      // 'white' | 'black'
+let gameId  = null;
+let state   = null;      // full game state object
+let selected = null;     // selected "from" point (1..24) or 'bar'
+let realtimeChan = null;
+let pollTimer = null;
+let lastStatus = null;
 
-// ─── INITIAL BOARD ───────────────────────────────────────────────────────────
-// points[0] unused, points[1..24] are the 24 points
-// positive = white, negative = black
-function freshBoard() {
-  const b = new Array(27).fill(0);
-  // White moves 24→1, Black moves 1→24
-  b[1]  =  2;  // white
-  b[6]  = -5;  // black
-  b[8]  = -3;  // black
-  b[12] =  5;  // white
-  b[13] = -5;  // black
-  b[17] =  3;  // white (fixed: white 17)
-  b[19] =  5;  // white
-  b[24] = -2;  // black
-  return b;
-}
-
-// ─── LOBBY ───────────────────────────────────────────────────────────────────
-function lobbyStatus(msg) {
-  document.getElementById('lobby-status').textContent = msg;
-}
-
-async function createGame() {
-  myName = document.getElementById('player-name').value.trim();
-  if (!myName) { lobbyStatus('Enter your name first'); return; }
-
-  gameCode = Math.random().toString(36).substring(2,8).toUpperCase();
-  gameId = gameCode;
-  myColor = 'white';
-
-  const state = buildInitialState();
-  state.white_name = myName;
-
-  const { error } = await sb.from('backgammon_games').insert({
-    id: gameCode,
-    state: state,
-    status: 'waiting'
-  });
-
-  if (error) { lobbyStatus('Error: ' + error.message); return; }
-
-  document.getElementById('display-code').textContent = gameCode;
-  show('waiting-room');
-  subscribeToGame();
-}
-
-async function joinGame() {
-  myName = document.getElementById('player-name').value.trim();
-  const code = document.getElementById('join-code').value.trim().toUpperCase();
-  if (!myName) { lobbyStatus('Enter your name first'); return; }
-  if (!code) { lobbyStatus('Enter a game code'); return; }
-
-  const { data, error } = await sb.from('backgammon_games').select('*').eq('id', code).single();
-  if (error || !data) { lobbyStatus('Game not found'); return; }
-  if (data.status !== 'waiting') { lobbyStatus('Game already in progress'); return; }
-
-  gameCode = code;
-  gameId = code;
-  myColor = 'black';
-
-  const newState = { ...data.state, black_name: myName };
-
-  await sb.from('backgammon_games').update({
-    state: newState,
-    status: 'playing'
-  }).eq('id', gameCode);
-
-  show('game');
-  gameState = newState;
-  setupGame();
-  subscribeToGame();
-}
-
-async function cancelGame() {
-  if (gameCode) await sb.from('backgammon_games').delete().eq('id', gameCode);
-  if (subscription) sb.removeChannel(subscription);
-  gameCode = null; gameId = null;
-  show('lobby');
-}
-
-function leaveGame() {
-  if (subscription) sb.removeChannel(subscription);
-  document.getElementById('win-overlay').classList.remove('show');
-  gameCode = null; gameState = null; selectedPoint = null;
-  show('lobby');
-}
-
-// ─── SUBSCRIPTION ────────────────────────────────────────────────────────────
-function subscribeToGame() {
-  if (subscription) sb.removeChannel(subscription);
-  subscription = sb.channel('game-' + gameCode)
-    .on('postgres_changes', {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'backgammon_games',
-      filter: 'id=eq.' + gameCode
-    }, payload => {
-      const s = payload.new.status;
-      const st = payload.new.state;
-      gameState = st;
-      if (s === 'playing' && document.getElementById('game').style.display === 'none') {
-        show('game');
-        setupGame();
-      } else {
-        renderGame();
-      }
-    })
-    .subscribe();
-}
-
-// ─── GAME STATE ───────────────────────────────────────────────────────────────
-function buildInitialState() {
+function initialState() {
+  const board = Array.from({length:25}, () => ({color:null,count:0})); // index 1..24
+  const set = (p,c,n)=>{board[p]={color:c,count:n}};
+  // White: 24(2), 13(5), 8(3), 6(5)
+  set(24,'white',2); set(13,'white',5); set(8,'white',3); set(6,'white',5);
+  // Black: 1(2), 12(5), 17(3), 19(5)
+  set(1,'black',2); set(12,'black',5); set(17,'black',3); set(19,'black',5);
   return {
-    board: freshBoard(),
+    board,
+    bar:  {white:0, black:0},
+    off:  {white:0, black:0},
     turn: 'white',
     dice: [],
-    phase: 'roll',   // roll | move | done
-    bar: { white: 0, black: 0 },
-    borneOff: { white: 0, black: 0 },
-    white_name: '',
-    black_name: ''
+    moves: [],          // remaining pip values
+    rolled: false,
+    winner: null,
   };
 }
 
-async function pushState(newState, status) {
-  gameState = newState;
-  await sb.from('backgammon_games').update({
-    state: newState,
-    status: status || 'playing'
-  }).eq('id', gameCode);
+/* ===========================================================
+   Lobby
+=========================================================== */
+const $ = id => document.getElementById(id);
+
+function showLobby()   { $('lobby').style.display=''; $('gameScreen').style.display='none'; $('overScreen').style.display='none'; }
+function showWaiting() { $('lobbyMain').style.display='none'; $('waiting').style.display=''; }
+function showGame()    { $('lobby').style.display='none'; $('gameScreen').style.display=''; $('overScreen').style.display='none'; }
+function showOver(msg) { $('gameScreen').style.display='none'; $('overScreen').style.display=''; $('winnerText').textContent=msg; }
+
+function randCode() {
+  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s=""; for(let i=0;i<6;i++) s+=chars[Math.floor(Math.random()*chars.length)];
+  return s;
 }
 
-// ─── SETUP GAME UI ────────────────────────────────────────────────────────────
-function setupGame() {
-  document.getElementById('game-code-display').textContent = 'Code: ' + gameCode;
+async function createGame() {
+  $('btnCreate').disabled = true;
+  const code = randCode();
+  const s = initialState();
+  const { error } = await sb.from(TABLE).insert({ id: code, state: s, status: 'waiting' });
+  if (error) { $('lobbyStatus').textContent = "Error: "+error.message; $('lobbyStatus').className="status err"; $('btnCreate').disabled=false; return; }
+  gameId = code; myColor = 'white'; state = s;
+  $('gameCode').textContent = code;
+  showWaiting();
+  subscribeGame();          // realtime
+  startPolling();           // polling fallback (the fix)
+}
+
+async function joinGame() {
+  const code = $('joinCode').value.trim().toUpperCase();
+  if (code.length !== 6) { $('lobbyStatus').textContent="Enter a 6-character code"; $('lobbyStatus').className="status err"; return; }
+  const { data, error } = await sb.from(TABLE).select('*').eq('id', code).maybeSingle();
+  if (error || !data) { $('lobbyStatus').textContent="Game not found"; $('lobbyStatus').className="status err"; return; }
+  if (data.status !== 'waiting') { $('lobbyStatus').textContent="Game already started"; $('lobbyStatus').className="status err"; return; }
+  gameId = code; myColor='black'; state = data.state;
+  const { error: uerr } = await sb.from(TABLE).update({ status:'playing', state }).eq('id', code);
+  if (uerr) { $('lobbyStatus').textContent="Error: "+uerr.message; $('lobbyStatus').className="status err"; return; }
+  lastStatus = 'playing';
+  enterGame();
+  subscribeGame();
+  startPolling();
+}
+
+async function cancelGame() {
+  if (gameId) { await sb.from(TABLE).delete().eq('id', gameId); }
+  stopPolling(); if (realtimeChan) sb.removeChannel(realtimeChan);
+  gameId=null; state=null; myColor=null;
+  $('waiting').style.display='none'; $('lobbyMain').style.display=''; $('btnCreate').disabled=false;
+  showLobby();
+}
+
+/* ===========================================================
+   Realtime + polling fallback
+=========================================================== */
+function subscribeGame() {
+  if (realtimeChan) sb.removeChannel(realtimeChan);
+  realtimeChan = sb
+    .channel('g:'+gameId)
+    .on('postgres_changes', { event:'*', schema:'public', table:TABLE, filter:`id=eq.${gameId}` },
+        payload => { if (payload.new) applyRemote(payload.new); })
+    .subscribe();
+}
+
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(async () => {
+    if (!gameId) return;
+    const { data, error } = await sb.from(TABLE).select('state,status').eq('id', gameId).maybeSingle();
+    if (error || !data) return;
+    applyRemote(data);
+  }, 2000);
+}
+function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer=null; } }
+
+function applyRemote(row) {
+  // The fix: when creator is in "waiting" and row flips to "playing", enter the game.
+  if (row.status === 'playing' && lastStatus !== 'playing') {
+    lastStatus = 'playing';
+    state = row.state;
+    if ($('gameScreen').style.display === 'none') enterGame();
+  }
+  if (row.status === 'playing' && state) {
+    // merge state (ignore our own optimistic updates that are identical)
+    state = row.state;
+    renderGame();
+  }
+  if (row.state && row.state.winner) {
+    const msg = row.state.winner === myColor ? "You win!" : "You lose.";
+    showOver(msg);
+    stopPolling();
+  }
+}
+
+/* ===========================================================
+   Game UI
+=========================================================== */
+function enterGame() {
+  lastStatus = 'playing';
+  showGame();
+  $('gCode').textContent = gameId;
+  $('youBadge').textContent = myColor.toUpperCase();
+  $('youBadge').className = 'turnbadge '+myColor;
   renderGame();
 }
 
-// ─── RENDER ──────────────────────────────────────────────────────────────────
-const CANVAS_W = 740, CANVAS_H = 500;
-const BOARD_L = 20, BOARD_T = 20, BOARD_R = 20, BOARD_B = 20;
-const BAR_W = 50;
-const W = CANVAS_W - BOARD_L - BOARD_R;
-const H = CANVAS_H - BOARD_T - BOARD_B;
-const HALF_W = (W - BAR_W) / 2;
-const PT_W = HALF_W / 6;
-const PT_H = H * 0.42;
-const CHECKER_R = PT_W * 0.42;
-
 function renderGame() {
-  const s = gameState;
-  if (!s) return;
-
-  // name badges
-  document.getElementById('name-white').textContent = s.white_name || 'White';
-  document.getElementById('name-black').textContent = s.black_name || 'Black';
-
-  // active pill
-  document.getElementById('pill-white').classList.toggle('active', s.turn === 'white');
-  document.getElementById('pill-black').classList.toggle('active', s.turn === 'black');
-
-  // add (You) label
-  const wLabel = (s.white_name || 'White') + (myColor === 'white' ? ' (You)' : '');
-  const bLabel = (s.black_name || 'Black') + (myColor === 'black' ? ' (You)' : '');
-  document.getElementById('name-white').textContent = wLabel;
-  document.getElementById('name-black').textContent = bLabel;
-
-  // borne off
-  document.getElementById('bo-white').textContent = 'Borne off: ' + (s.borneOff?.white || 0);
-  document.getElementById('bo-black').textContent = 'Borne off: ' + (s.borneOff?.black || 0);
-
-  // status
-  const statusEl = document.getElementById('status-line');
-  const isMyTurn = s.turn === myColor;
-  if (s.phase === 'done') {
-    statusEl.textContent = '';
-  } else if (s.phase === 'roll') {
-    statusEl.textContent = isMyTurn ? 'Your turn — roll the dice!' : (getOpponentName() + "'s turn to roll…");
-  } else {
-    statusEl.textContent = isMyTurn ? 'Select a checker to move' : (getOpponentName() + ' is moving…');
-  }
-
-  // buttons
-  document.getElementById('btn-roll').disabled = !(isMyTurn && s.phase === 'roll');
-  document.getElementById('btn-end').disabled = !(isMyTurn && s.phase === 'move');
-
+  if (!state) return;
+  $('turnBadge').textContent = state.turn.toUpperCase();
+  $('turnBadge').className = 'turnbadge '+state.turn;
+  const myTurn = state.turn === myColor && !state.winner;
+  $('btnRoll').disabled = !myTurn || state.rolled;
+  $('btnPass').disabled = !myTurn || !state.rolled;
   // dice
-  renderDice(s.dice || []);
-
-  // board canvas
-  drawBoard(s);
-
-  // win check
-  if (s.phase === 'done') {
-    const winner = s.borneOff?.white >= 15 ? 'white' : 'black';
-    const wName = winner === 'white' ? (s.white_name || 'White') : (s.black_name || 'Black');
-    document.getElementById('win-title').textContent = winner === myColor ? '🏆 You Win!' : 'Defeat';
-    document.getElementById('win-msg').textContent = wName + ' has borne off all checkers!';
-    document.getElementById('win-overlay').classList.add('show');
-  }
+  const dd = $('dice'); dd.innerHTML='';
+  (state.dice||[]).forEach((v,i)=>{
+    const d=document.createElement('div'); d.className='die'+(state.moves.includes(v)?'':' used'); d.textContent=v; dd.appendChild(d);
+  });
+  // board
+  drawBoard();
+  // status
+  let msg='';
+  if (state.winner) msg = (state.winner===myColor?'You win!':'You lose.');
+  else if (!myTurn) msg = 'Waiting for opponent…';
+  else if (!state.rolled) msg='Your turn — roll the dice.';
+  else if (state.moves.length===0) msg='No moves left — end turn.';
+  else msg='Make a move ('+state.moves.join(', ')+')';
+  $('gameStatus').textContent = msg;
 }
 
-function getOpponentName() {
-  if (!gameState) return 'Opponent';
-  return myColor === 'white' ? (gameState.black_name || 'Black') : (gameState.white_name || 'White');
+function drawBoard() {
+  const b = $('board'); b.innerHTML='';
+  // Layout:
+  // Row1 (top):    off-bar? | quad top-left (13..18) | bar | quad top-right (19..24) | off
+  // Row2 (bottom): off-bar? | quad bot-left (12..7)  | bar | quad bot-right (6..1)   | off
+  const leftPadTop = cellDiv('bar');     // far-left column (reserved for bar-home perhaps)
+  const leftPadBot = cellDiv('bar');
+
+  const quadTL = quad('top',[13,14,15,16,17,18]);
+  const quadTR = quad('top',[19,20,21,22,23,24]);
+  const quadBL = quad('bot',[12,11,10,9,8,7]);
+  const quadBR = quad('bot',[6,5,4,3,2,1]);
+
+  const barTop = barCell('top');
+  const barBot = barCell('bot');
+
+  const offTop = offCell('top');
+  const offBot = offCell('bot');
+
+  b.appendChild(leftPadTop);
+  b.appendChild(quadTL);
+  b.appendChild(barTop);
+  b.appendChild(quadTR);
+  b.appendChild(offTop);
+
+  b.appendChild(leftPadBot);
+  b.appendChild(quadBL);
+  b.appendChild(barBot);
+  b.appendChild(quadBR);
+  b.appendChild(offBot);
 }
 
-// ─── CANVAS BOARD ─────────────────────────────────────────────────────────────
-function drawBoard(s) {
-  const canvas = document.getElementById('board');
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+function cellDiv(cls){ const d=document.createElement('div'); d.className=cls; return d; }
 
-  const ox = BOARD_L, oy = BOARD_T;
-
-  // background felt
-  ctx.fillStyle = '#1b3d2a';
-  ctx.fillRect(ox, oy, W, H);
-
-  // draw points (triangles)
-  for (let i = 1; i <= 24; i++) {
-    drawPoint(ctx, i, ox, oy, s);
-  }
-
-  // bar
-  ctx.fillStyle = '#2a1505';
-  ctx.fillRect(ox + HALF_W, oy, BAR_W, H);
-
-  // border lines
-  ctx.strokeStyle = 'rgba(200,149,58,0.3)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(ox, oy, W, H);
-  ctx.strokeRect(ox + HALF_W, oy, BAR_W, H);
-
-  // draw checkers on points
-  for (let i = 1; i <= 24; i++) {
-    drawCheckers(ctx, i, ox, oy, s);
-  }
-
-  // bar checkers
-  drawBarCheckers(ctx, ox, oy, s);
-
-  // highlight valid moves
-  if (s.turn === myColor && s.phase === 'move' && selectedPoint !== null) {
-    const moves = getValidDestinations(selectedPoint, s);
-    moves.forEach(dest => highlightPoint(ctx, dest, ox, oy));
-  }
-
-  // highlight selected
-  if (selectedPoint !== null) {
-    const [px, py] = pointCenter(selectedPoint, ox, oy);
-    ctx.beginPath();
-    ctx.arc(px, py, CHECKER_R + 4, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(232,184,75,0.9)';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-  }
-}
-
-function pointCoords(pointNum, ox, oy) {
-  // points 13-24 = bottom row (left half: 13-18, right half: 19-24)
-  // points 1-12  = top row    (left half: 7-12,  right half: 1-6)
-  let x, isBottom;
-  if (pointNum >= 1 && pointNum <= 6) {
-    // top-right, right to left: 1 is rightmost
-    x = ox + HALF_W + BAR_W + (6 - pointNum) * PT_W;
-    isBottom = false;
-  } else if (pointNum >= 7 && pointNum <= 12) {
-    // top-left, right to left: 7 is rightmost
-    x = ox + (12 - pointNum) * PT_W;
-    isBottom = false;
-  } else if (pointNum >= 13 && pointNum <= 18) {
-    // bottom-left, left to right: 13 is leftmost
-    x = ox + (pointNum - 13) * PT_W;
-    isBottom = true;
-  } else {
-    // bottom-right, left to right: 19 is leftmost
-    x = ox + HALF_W + BAR_W + (pointNum - 19) * PT_W;
-    isBottom = true;
-  }
-  return { x, isBottom };
-}
-
-function drawPoint(ctx, pointNum, ox, oy, s) {
-  const { x, isBottom } = pointCoords(pointNum, ox, oy);
-  const tipY = isBottom ? oy + H - PT_H : oy + PT_H;
-  const baseY = isBottom ? oy + H : oy;
-  const color = (pointNum % 2 === 0) ? '#7a2020' : '#b8832a';
-
-  ctx.beginPath();
-  ctx.moveTo(x, baseY);
-  ctx.lineTo(x + PT_W, baseY);
-  ctx.lineTo(x + PT_W / 2, tipY);
-  ctx.closePath();
-  ctx.fillStyle = color;
-  ctx.fill();
-
-  // point number
-  ctx.fillStyle = 'rgba(255,255,255,0.18)';
-  ctx.font = '10px EB Garamond, serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(pointNum, x + PT_W / 2, isBottom ? oy + H - 4 : oy + 12);
-}
-
-function pointCenter(pointNum, ox, oy) {
-  if (pointNum === 24) return [ox + HALF_W + BAR_W / 2, oy + H * 0.25]; // bar white
-  if (pointNum === 25) return [ox + HALF_W + BAR_W / 2, oy + H * 0.75]; // bar black
-  const { x, isBottom } = pointCoords(pointNum, ox, oy);
-  const py = isBottom ? oy + H - CHECKER_R - 2 : oy + CHECKER_R + 2;
-  return [x + PT_W / 2, py];
-}
-
-function drawCheckers(ctx, pointNum, ox, oy, s) {
-  const count = s.board[pointNum];
-  if (count === 0) return;
-  const isWhite = count > 0;
-  const abs = Math.abs(count);
-  const { x, isBottom } = pointCoords(pointNum, ox, oy);
-  const cx = x + PT_W / 2;
-
-  for (let i = 0; i < Math.min(abs, 5); i++) {
-    const direction = isBottom ? -1 : 1;
-    const cy = isBottom
-      ? oy + H - CHECKER_R - 2 - i * (CHECKER_R * 2 + 1)
-      : oy + CHECKER_R + 2 + i * (CHECKER_R * 2 + 1);
-    drawChecker(ctx, cx, cy, isWhite);
-  }
-  if (abs > 5) {
-    const cy = isBottom
-      ? oy + H - CHECKER_R - 2 - 4 * (CHECKER_R * 2 + 1)
-      : oy + CHECKER_R + 2 + 4 * (CHECKER_R * 2 + 1);
-    ctx.fillStyle = 'rgba(232,184,75,0.9)';
-    ctx.font = 'bold 11px EB Garamond';
-    ctx.textAlign = 'center';
-    ctx.fillText(abs, cx, cy + 4);
-  }
-}
-
-function drawBarCheckers(ctx, ox, oy, s) {
-  const bx = ox + HALF_W + BAR_W / 2;
-  // white on bar (top half)
-  for (let i = 0; i < s.bar.white; i++) {
-    drawChecker(ctx, bx, oy + 30 + i * (CHECKER_R * 2 + 2), true);
-  }
-  // black on bar (bottom half)
-  for (let i = 0; i < s.bar.black; i++) {
-    drawChecker(ctx, bx, oy + H - 30 - i * (CHECKER_R * 2 + 2), false);
-  }
-}
-
-function drawChecker(ctx, cx, cy, isWhite) {
-  const r = CHECKER_R;
-  const grad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
-  if (isWhite) {
-    grad.addColorStop(0, '#fff8e8');
-    grad.addColorStop(0.5, '#e8d090');
-    grad.addColorStop(1, '#c8a040');
-  } else {
-    grad.addColorStop(0, '#3a2810');
-    grad.addColorStop(0.5, '#1a0e05');
-    grad.addColorStop(1, '#0a0502');
-  }
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = grad;
-  ctx.fill();
-  ctx.strokeStyle = isWhite ? 'rgba(200,160,60,0.8)' : 'rgba(80,50,20,0.8)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  // shine
-  ctx.beginPath();
-  ctx.arc(cx - r * 0.25, cy - r * 0.25, r * 0.3, 0, Math.PI * 2);
-  ctx.fillStyle = isWhite ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.06)';
-  ctx.fill();
-}
-
-function highlightPoint(ctx, pointNum, ox, oy) {
-  if (pointNum === 26) { // bear off zone
-    // right edge highlight
-    ctx.fillStyle = 'rgba(232,184,75,0.18)';
-    ctx.fillRect(ox + W, oy, 30, H / 2);
-    return;
-  }
-  const [cx, cy] = pointCenter(pointNum, ox, oy);
-  ctx.beginPath();
-  ctx.arc(cx, cy, CHECKER_R + 6, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(232,184,75,0.22)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(232,184,75,0.6)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-}
-
-// ─── DICE RENDER ──────────────────────────────────────────────────────────────
-const PIP_POSITIONS = {
-  1: [[1,1]],
-  2: [[0,0],[2,2]],
-  3: [[0,0],[1,1],[2,2]],
-  4: [[0,0],[0,2],[2,0],[2,2]],
-  5: [[0,0],[0,2],[1,1],[2,0],[2,2]],
-  6: [[0,0],[0,1],[0,2],[2,0],[2,1],[2,2]]
-};
-
-function renderDice(dice) {
-  const row = document.getElementById('dice-row');
-  row.innerHTML = '';
-  if (!dice.length) return;
-  dice.forEach((d, i) => {
-    const face = document.createElement('div');
-    face.className = 'die-face' + (d.used ? ' used' : '');
-    const inner = document.createElement('div');
-    inner.className = 'die-inner';
-    // 3x3 grid of pips
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 3; c++) {
-        const pip = document.createElement('div');
-        const pips = PIP_POSITIONS[d.value] || [];
-        const on = pips.some(p => p[0] === r && p[1] === c);
-        pip.className = 'dp' + (on ? ' on' : '');
-        inner.appendChild(pip);
+function quad(pos, points) {
+  const q = document.createElement('div'); q.className='quad';
+  points.forEach((p, idx) => {
+    const dark = (idx%2===(pos==='top'?1:0));
+    const pt = document.createElement('div');
+    pt.className = 'point '+pos+(dark?' dark':'');
+    pt.dataset.point = p;
+    const n=document.createElement('div'); n.className='num'; n.textContent=p; pt.appendChild(n);
+    const ch=document.createElement('div'); ch.className='checkers';
+    const slot = state.board[p];
+    if (slot && slot.count>0) {
+      const max = Math.min(slot.count,5);
+      for (let i=0;i<max;i++){
+        const c=document.createElement('div'); c.className='checker '+slot.color;
+        if (i===max-1 && slot.count>5){ c.classList.add('count'); if(slot.color==='black')c.classList.add('black'); c.textContent=slot.count; }
+        ch.appendChild(c);
       }
     }
-    face.appendChild(inner);
-    row.appendChild(face);
+    pt.appendChild(ch);
+    if (selected === p) pt.classList.add('selected');
+    if (isLegalDest(p)) pt.classList.add('legal');
+    pt.onclick = () => onPointClick(p);
+    q.appendChild(pt);
   });
+  return q;
 }
 
-// ─── CLICK HANDLER ────────────────────────────────────────────────────────────
-document.getElementById('board').addEventListener('click', function(e) {
-  if (!gameState || gameState.turn !== myColor || gameState.phase !== 'move') return;
-  const canvas = this;
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = CANVAS_W / rect.width;
-  const scaleY = CANVAS_H / rect.height;
-  const mx = (e.clientX - rect.left) * scaleX;
-  const my = (e.clientY - rect.top) * scaleY;
+function barCell(pos) {
+  const bar = document.createElement('div'); bar.className='bar';
+  const group = document.createElement('div'); group.className='bar-checkers';
+  // top bar shows black bar, bottom shows white bar
+  const color = pos==='top' ? 'black' : 'white';
+  const count = state.bar[color];
+  for (let i=0;i<Math.min(count,5);i++){
+    const c=document.createElement('div'); c.className='checker '+color;
+    if (i===4 && count>5){ c.classList.add('count'); if(color==='black')c.classList.add('black'); c.textContent=count;}
+    group.appendChild(c);
+  }
+  group.onclick = () => { if (state.bar[myColor]>0 && state.turn===myColor) { selected='bar'; renderGame(); } };
+  if (selected==='bar' && color===myColor) group.style.outline='2px solid var(--accent)';
+  bar.appendChild(group);
+  return bar;
+}
 
-  const clicked = getClickedPoint(mx, my);
-  if (clicked === null) return;
+function offCell(pos) {
+  const off = document.createElement('div'); off.className='off';
+  const color = pos==='top' ? 'black' : 'white';
+  const wrap = document.createElement('div'); wrap.className='off-checkers';
+  const lbl = document.createElement('div'); lbl.className='off-label'; lbl.textContent=color.toUpperCase()+' OFF';
+  const num = document.createElement('div'); num.textContent = state.off[color];
+  wrap.appendChild(lbl); wrap.appendChild(num);
+  // Clickable as destination for bearing off
+  off.onclick = () => onOffClick(color);
+  if (isLegalDest('off-'+color)) off.style.outline='2px solid #28c878';
+  off.appendChild(wrap);
+  return off;
+}
 
-  const s = gameState;
-  const myBar = myColor === 'white' ? s.bar.white : s.bar.black;
+/* ===========================================================
+   Move logic
+=========================================================== */
+function dir(color){ return color==='white' ? -1 : 1; }
+function homeRange(color){ return color==='white' ? [1,6] : [19,24]; }
+function entryPoint(color, die){ return color==='white' ? (25-die) : die; }
 
-  // must enter from bar first
-  if (myBar > 0) {
-    const barPt = myColor === 'white' ? 24 : 25;
-    if (selectedPoint === null) {
-      if (clicked === barPt) { selectedPoint = barPt; renderGame(); }
-      return;
+function allInHome(color) {
+  const [a,b] = homeRange(color);
+  if (state.bar[color]>0) return false;
+  for (let p=1;p<=24;p++){
+    if (state.board[p].color===color && state.board[p].count>0) {
+      if (p<a || p>b) return false;
     }
-    const dests = getValidDestinations(barPt, s);
-    if (dests.includes(clicked)) {
-      applyMove(barPt, clicked);
-      selectedPoint = null;
-    } else {
-      selectedPoint = null; renderGame();
+  }
+  return true;
+}
+
+function highestOccupied(color) { // for bearing off: white=largest p in 1..6, black=smallest in 19..24
+  if (color==='white') {
+    for (let p=6;p>=1;p--) if (state.board[p].color==='white' && state.board[p].count>0) return p;
+  } else {
+    for (let p=19;p<=24;p++) if (state.board[p].color==='black' && state.board[p].count>0) return p;
+  }
+  return null;
+}
+
+function pipForMove(from, to, color) {
+  if (to==='off') {
+    if (color==='white') return from;            // distance to off = point number
+    else return 25 - from;
+  }
+  return color==='white' ? (from - to) : (to - from);
+}
+
+function canLandOn(to, color) {
+  const slot = state.board[to];
+  if (!slot || slot.count===0) return true;
+  if (slot.color===color) return true;
+  return slot.count===1;                          // blot
+}
+
+function legalMoves(from) {
+  const color = myColor;
+  const res = new Set();
+  if (state.moves.length===0) return res;
+  if (from==='bar') {
+    for (const d of new Set(state.moves)) {
+      const ep = entryPoint(color,d);
+      if (canLandOn(ep,color)) res.add(ep);
     }
+    return res;
+  }
+  if (state.bar[color]>0) return res; // must enter from bar first
+  const slot = state.board[from];
+  if (!slot || slot.color!==color || slot.count===0) return res;
+  for (const d of new Set(state.moves)) {
+    const to = color==='white' ? from-d : from+d;
+    if (to>=1 && to<=24 && canLandOn(to,color)) res.add(to);
+    // bearing off
+    if ((color==='white' && to<1) || (color==='black' && to>24)) {
+      if (allInHome(color)) {
+        const exact = pipForMove(from,'off',color);
+        if (d===exact) res.add('off-'+color);
+        else if (d>exact && from===highestOccupied(color)) res.add('off-'+color);
+      }
+    }
+  }
+  return res;
+}
+
+function isLegalDest(dest) {
+  if (selected===null) return false;
+  if (state.turn!==myColor || !state.rolled || state.winner) return false;
+  const legals = legalMoves(selected);
+  return legals.has(dest);
+}
+
+function onPointClick(p) {
+  if (state.turn!==myColor || !state.rolled || state.winner) return;
+  if (selected===null || selected===p) {
+    // select
+    if (state.bar[myColor]>0) { selected='bar'; renderGame(); return; }
+    const slot = state.board[p];
+    if (slot.color===myColor && slot.count>0) { selected=p; renderGame(); }
     return;
   }
+  // try move
+  const legals = legalMoves(selected);
+  if (legals.has(p)) {
+    applyMove(selected,p);
+    selected=null;
+  } else {
+    // re-select if own point
+    const slot=state.board[p];
+    if (slot.color===myColor && slot.count>0 && state.bar[myColor]===0) selected=p;
+    else selected=null;
+  }
+  renderGame();
+  maybeEndTurn();
+  pushState();
+}
 
-  if (selectedPoint === null) {
-    // select a checker
-    const pt = clicked <= 24 ? clicked : null;
-    if (pt === null) return;
-    const val = s.board[pt];
-    const mine = myColor === 'white' ? val > 0 : val < 0;
-    if (!mine) return;
-    // check it has valid moves
-    if (getValidDestinations(pt, s).length === 0) return;
-    selectedPoint = pt;
+function onOffClick(color) {
+  if (color!==myColor) return;
+  if (selected===null) return;
+  const legals = legalMoves(selected);
+  const key='off-'+color;
+  if (legals.has(key)) {
+    applyMove(selected,'off');
+    selected=null;
     renderGame();
-  } else {
-    const dests = getValidDestinations(selectedPoint, s);
-    if (clicked === selectedPoint) { selectedPoint = null; renderGame(); return; }
-    if (dests.includes(clicked)) {
-      applyMove(selectedPoint, clicked);
-      selectedPoint = null;
-    } else {
-      // try to select a different checker
-      const val = s.board[clicked] || 0;
-      const mine = myColor === 'white' ? val > 0 : val < 0;
-      if (mine && clicked !== selectedPoint) {
-        selectedPoint = clicked; renderGame();
-      } else {
-        selectedPoint = null; renderGame();
-      }
-    }
-  }
-});
-
-function getClickedPoint(mx, my) {
-  const ox = BOARD_L, oy = BOARD_T;
-  // bar
-  const barX1 = ox + HALF_W, barX2 = barX1 + BAR_W;
-  if (mx >= barX1 && mx <= barX2) {
-    return my < oy + H / 2 ? 24 : 25; // 24=bar-white, 25=bar-black
-  }
-  // bear off zone (right of board)
-  if (mx > ox + W && mx < ox + W + 30) return 26;
-
-  for (let i = 1; i <= 24; i++) {
-    const { x, isBottom } = pointCoords(i, ox, oy);
-    if (mx >= x && mx <= x + PT_W) {
-      if (isBottom && my >= oy + H / 2) return i;
-      if (!isBottom && my <= oy + H / 2) return i;
-    }
-  }
-  return null;
-}
-
-// ─── MOVE LOGIC ───────────────────────────────────────────────────────────────
-function getAvailableDice(s) {
-  return s.dice.filter(d => !d.used).map(d => d.value);
-}
-
-function getValidDestinations(from, s) {
-  const avail = getAvailableDice(s);
-  if (!avail.length) return [];
-  const dests = new Set();
-  const isWhite = myColor === 'white';
-  const dir = isWhite ? -1 : 1; // white moves toward 1, black toward 24
-  const inBearOff = canBearOff(s);
-
-  avail.forEach(die => {
-    let to;
-    if (from === 24) { // white bar
-      to = 25 - die; // enters in white's home opponent zone: points 24..19 mapped to entry
-      to = 25 - die; // white enters on points 24-19 based on die
-      // actually white enters opponent's home: points 24 down
-      // standard: white enters on point (25 - die)
-      if (isWhite) to = 25 - die;
-    } else if (from === 25) { // black bar
-      to = die; // black enters on point (die)
-    } else {
-      to = from + die * dir;
-    }
-
-    if (to >= 1 && to <= 24) {
-      const target = s.board[to];
-      const blocked = isWhite ? target < -1 : target > 1;
-      if (!blocked) dests.add(to);
-    } else if (inBearOff) {
-      // bear off
-      if (isWhite && to <= 0) dests.add(26);
-      if (!isWhite && to >= 25) dests.add(26);
-    }
-  });
-
-  return [...dests];
-}
-
-function canBearOff(s) {
-  const b = s.board;
-  const bar = s.bar;
-  if (myColor === 'white') {
-    if (bar.white > 0) return false;
-    for (let i = 7; i <= 24; i++) if (b[i] > 0) return false;
-    return true;
-  } else {
-    if (bar.black > 0) return false;
-    for (let i = 1; i <= 18; i++) if (b[i] < 0) return false;
-    return true;
+    maybeEndTurn();
+    pushState();
   }
 }
 
-function getDieForMove(from, to, s) {
-  const avail = getAvailableDice(s);
-  const isWhite = myColor === 'white';
-  const dir = isWhite ? -1 : 1;
-
-  for (let die of avail) {
-    let expected;
-    if (from === 24) expected = 25 - die;
-    else if (from === 25) expected = die;
-    else expected = from + die * dir;
-
-    if (to === 26) {
-      // bear off: exact or overshoot
-      if (isWhite && from - die <= 0) return die;
-      if (!isWhite && from + die >= 25) return die;
-    } else if (expected === to) {
-      return die;
-    }
-  }
-  return null;
+function consumeDie(pip) {
+  const i = state.moves.indexOf(pip);
+  if (i>=0) state.moves.splice(i,1);
 }
 
 function applyMove(from, to) {
-  const s = JSON.parse(JSON.stringify(gameState));
-  const isWhite = myColor === 'white';
-  const die = getDieForMove(from, to, s);
-  if (die === null) return;
-
-  // mark die used
-  const dieIdx = s.dice.findIndex(d => !d.used && d.value === die);
-  if (dieIdx === -1) return;
-  s.dice[dieIdx].used = true;
-
-  // remove from source
-  if (from === 24) s.bar.white--;
-  else if (from === 25) s.bar.black--;
-  else {
-    if (isWhite) s.board[from]--;
-    else s.board[from]++;
-  }
-
-  if (to === 26) {
-    // bear off
-    if (isWhite) s.borneOff.white++;
-    else s.borneOff.black++;
-  } else {
-    const target = s.board[to];
-    // hit a blot?
-    if (isWhite && target === -1) { s.board[to] = 0; s.bar.black++; }
-    else if (!isWhite && target === 1) { s.board[to] = 0; s.bar.white++; }
-    // land
-    if (isWhite) s.board[to]++;
-    else s.board[to]--;
-  }
-
-  // check win
-  if (s.borneOff.white >= 15 || s.borneOff.black >= 15) {
-    s.phase = 'done';
-    pushState(s, 'done');
-    return;
-  }
-
-  // check if more moves possible
-  const remaining = s.dice.filter(d => !d.used);
-  if (remaining.length === 0 || !hasAnyMove(s)) {
-    s.phase = 'move'; // will be switched to next turn on endTurn
-    // auto end if no moves
-    if (remaining.length === 0 || !hasAnyMove(s)) {
-      switchTurn(s);
-      return;
+  const color = myColor;
+  // determine pip used
+  let pipUsed;
+  if (from==='bar') {
+    pipUsed = color==='white' ? (25-to) : to;
+    state.bar[color]--;
+    placeOn(to,color);
+  } else if (to==='off') {
+    const exact = pipForMove(from,'off',color);
+    if (state.moves.includes(exact)) pipUsed = exact;
+    else {
+      // use smallest die >= exact (highest-occupied rule)
+      pipUsed = Math.min(...state.moves.filter(d=>d>=exact));
     }
+    removeFrom(from,color);
+    state.off[color]++;
+    if (state.off[color]===15) state.winner = color;
+  } else {
+    pipUsed = color==='white' ? (from-to) : (to-from);
+    removeFrom(from,color);
+    // handle blot capture
+    const slot = state.board[to];
+    if (slot.color && slot.color!==color && slot.count===1) {
+      state.bar[slot.color]++;
+      state.board[to]={color:null,count:0};
+    }
+    placeOn(to,color);
   }
-
-  pushState(s);
+  consumeDie(pipUsed);
 }
 
-function hasAnyMove(s) {
-  const b = s.board;
-  const bar = s.bar;
-  const isWhite = s.turn === 'white';
-  const avail = s.dice.filter(d => !d.used).map(d => d.value);
-  if (!avail.length) return false;
-  const dir = isWhite ? -1 : 1;
+function removeFrom(p,color){
+  const s=state.board[p]; s.count--; if(s.count===0) s.color=null;
+}
+function placeOn(p,color){
+  const s=state.board[p];
+  if (!s.color) s.color=color;
+  s.count++;
+}
 
-  // check bar
-  if (isWhite && bar.white > 0) {
-    return avail.some(die => {
-      const to = 25 - die;
-      return to >= 1 && to <= 24 && b[to] > -2;
-    });
+function hasAnyMove() {
+  if (state.moves.length===0) return false;
+  if (state.bar[myColor]>0) {
+    for (const d of new Set(state.moves)) if (canLandOn(entryPoint(myColor,d),myColor)) return true;
+    return false;
   }
-  if (!isWhite && bar.black > 0) {
-    return avail.some(die => {
-      const to = die;
-      return to >= 1 && to <= 24 && b[to] < 2;
-    });
-  }
-
-  for (let pt = 1; pt <= 24; pt++) {
-    const val = b[pt];
-    const mine = isWhite ? val > 0 : val < 0;
-    if (!mine) continue;
-    for (let die of avail) {
-      const to = pt + die * dir;
-      if (to >= 1 && to <= 24) {
-        const blocked = isWhite ? b[to] < -1 : b[to] > 1;
-        if (!blocked) return true;
-      } else {
-        // bear off check
-        if (canBearOffState(s)) return true;
-      }
+  for (let p=1;p<=24;p++){
+    if (state.board[p].color===myColor && state.board[p].count>0) {
+      if (legalMoves(p).size>0) return true;
     }
   }
   return false;
 }
 
-function canBearOffState(s) {
-  const b = s.board;
-  const bar = s.bar;
-  if (s.turn === 'white') {
-    if (bar.white > 0) return false;
-    for (let i = 7; i <= 24; i++) if (b[i] > 0) return false;
-    return true;
-  } else {
-    if (bar.black > 0) return false;
-    for (let i = 1; i <= 18; i++) if (b[i] < 0) return false;
-    return true;
+function maybeEndTurn() {
+  if (state.winner) return;
+  if (!hasAnyMove()) {
+    endTurn();
   }
 }
 
-function switchTurn(s) {
-  s.turn = s.turn === 'white' ? 'black' : 'white';
-  s.dice = [];
-  s.phase = 'roll';
-  pushState(s);
+function endTurn() {
+  state.turn = state.turn==='white'?'black':'white';
+  state.dice=[]; state.moves=[]; state.rolled=false;
+  selected=null;
 }
 
-// ─── ROLL ─────────────────────────────────────────────────────────────────────
-function doRoll() {
-  const s = JSON.parse(JSON.stringify(gameState));
-  const d1 = Math.ceil(Math.random() * 6);
-  const d2 = Math.ceil(Math.random() * 6);
-  let dice;
-  if (d1 === d2) {
-    dice = [d1, d1, d1, d1].map(v => ({ value: v, used: false }));
-  } else {
-    dice = [{ value: d1, used: false }, { value: d2, used: false }];
-  }
-  s.dice = dice;
-  s.phase = 'move';
+/* ===========================================================
+   Roll / pass buttons
+=========================================================== */
+$('btnRoll').onclick = () => {
+  if (state.turn!==myColor || state.rolled || state.winner) return;
+  const d1 = 1+Math.floor(Math.random()*6);
+  const d2 = 1+Math.floor(Math.random()*6);
+  state.dice=[d1,d2];
+  state.moves = d1===d2 ? [d1,d1,d1,d1] : [d1,d2];
+  state.rolled=true;
+  renderGame();
+  if (!hasAnyMove()) { endTurn(); renderGame(); }
+  pushState();
+};
+$('btnPass').onclick = () => {
+  if (state.turn!==myColor || state.winner) return;
+  endTurn();
+  renderGame();
+  pushState();
+};
 
-  // check if any move possible
-  if (!hasAnyMove(s)) {
-    // no moves, skip turn
-    switchTurn(s);
-    return;
-  }
-  pushState(s);
+/* ===========================================================
+   Persist state
+=========================================================== */
+let pushing=false;
+async function pushState() {
+  if (!gameId) return;
+  if (pushing) return;
+  pushing=true;
+  try {
+    await sb.from(TABLE).update({ state, status: state.winner ? 'finished' : 'playing' }).eq('id', gameId);
+  } finally { pushing=false; }
 }
 
-function doEndTurn() {
-  const s = JSON.parse(JSON.stringify(gameState));
-  switchTurn(s);
-}
+/* ===========================================================
+   Wire up lobby buttons
+=========================================================== */
+$('btnCreate').onclick = createGame;
+$('btnJoin').onclick   = joinGame;
+$('btnCancel').onclick = cancelGame;
+$('joinCode').addEventListener('input', e => e.target.value = e.target.value.toUpperCase());
 
-// ─── SHOW/HIDE SCREENS ────────────────────────────────────────────────────────
-function show(screen) {
-  document.getElementById('lobby').style.display = 'none';
-  document.getElementById('waiting-room').style.display = 'none';
-  document.getElementById('game').style.display = 'none';
-
-  if (screen === 'lobby') document.getElementById('lobby').style.display = 'flex';
-  if (screen === 'waiting-room') document.getElementById('waiting-room').style.display = 'flex';
-  if (screen === 'game') document.getElementById('game').style.display = 'flex';
-}
+showLobby();
 </script>
-
-
-</body></html>
+</body>
+</html>
