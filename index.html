@@ -108,10 +108,10 @@
     <div id="lobbyStatus" class="status"></div>
   </div>
   <div id="waiting" style="display:none">
-    <div class="legend">Game code — share with your opponent:</div>
+    <div class="legend">Game code â share with your opponent:</div>
     <div id="gameCode" class="code">------</div>
-    <div class="color-callout">You are playing as ⚪ WHITE</div>
-    <div class="status">Waiting for opponent to join…</div>
+    <div class="color-callout">You are playing as âª WHITE</div>
+    <div class="status">Waiting for opponent to joinâ¦</div>
     <button id="btnCancel" class="ghost" style="width:100%">Cancel</button>
   </div>
 </div>
@@ -130,7 +130,7 @@
     <button id="btnPass" class="ghost">Pass / end turn</button>
     <span id="gameStatus" class="status" style="flex:1;text-align:right"></span>
   </div>
-  <div class="legend">White moves 24→1. Black moves 1→24. Click a point to select, then click a destination.</div>
+  <div class="legend">White moves 24â1. Black moves 1â24. Click a point to select, then click a destination.</div>
 </div>
 
 <!-- Game over -->
@@ -143,8 +143,8 @@
 /* ===========================================================
    Supabase
 =========================================================== */
-const SUPA_URL = "https://jzxvvngyezybhqqumbmd.supabase.co";
-const SUPA_KEY = "sb_publishable_ixngkc4AUnG-9IjRdpL_Ew_LNjI7NNN";
+const SUPA_URL = "https://erzwfsaoghkqgbdftped.supabase.co";
+const SUPA_KEY = "sb_publishable_0z37pIcAToijAA6xMKJdMw_7g_wg3IA";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 const TABLE = "backgammon_games";
 
@@ -213,7 +213,7 @@ async function joinGame() {
   const { data, error } = await sb.from(TABLE).select('*').eq('id', code).maybeSingle();
   if (error || !data) { $('lobbyStatus').textContent="Game not found"; $('lobbyStatus').className="status err"; return; }
   if (data.status !== 'waiting') { $('lobbyStatus').textContent="Game already started"; $('lobbyStatus').className="status err"; return; }
-  $('lobbyStatus').innerHTML='<span class="color-callout">You are playing as ⚫ BLACK</span>';
+  $('lobbyStatus').innerHTML='<span class="color-callout">You are playing as â« BLACK</span>';
   gameId = code; myColor='black'; state = data.state;
   const { error: uerr } = await sb.from(TABLE).update({ status:'playing', state }).eq('id', code);
   if (uerr) { $('lobbyStatus').textContent="Error: "+uerr.message; $('lobbyStatus').className="status err"; return; }
@@ -264,11 +264,11 @@ function applyRemote(row) {
   if (row.status === 'playing' && state) {
     const oldBar = state.bar[myColor];
     state = row.state;
-    if (state.bar[myColor] > oldBar) flashMsg = '😤 Hit! You\'re on the bar.';
+    if (state.bar[myColor] > oldBar) flashMsg = 'ð¤ Hit! You\'re on the bar.';
     renderGame();
   }
   if (row.state && row.state.winner) {
-    const msg = row.state.winner === myColor ? "🎉🏆 You win! 🏆🎉" : "😔 You lose. Better luck next time!";
+    const msg = row.state.winner === myColor ? "ðð You win! ðð" : "ð You lose. Better luck next time!";
     showOver(msg);
     stopPolling();
   }
@@ -302,13 +302,13 @@ function renderGame() {
   drawBoard();
   // status
   let msg='';
-  if (state.winner) msg = (state.winner===myColor?'🎉🏆 You win! 🏆🎉':'😔 You lose. Better luck next time!');
-  else if (!myTurn) msg = '⏳ Waiting for opponent…';
-  else if (!state.rolled) msg='🎲 Your turn — roll the dice!';
-  else if (state.moves.length===0) msg='😬 No moves left — turn ending.';
+  if (state.winner) msg = (state.winner===myColor?'ðð You win! ðð':'ð You lose. Better luck next time!');
+  else if (!myTurn) msg = 'â³ Waiting for opponentâ¦';
+  else if (!state.rolled) msg='ð² Your turn â roll the dice!';
+  else if (state.moves.length===0) msg='ð¬ No moves left â turn ending.';
   else {
     const isDoubles = state.dice.length===2 && state.dice[0]===state.dice[1];
-    if (isDoubles && state.moves.length===4) msg='🔥 Double '+state.dice[0]+'s! 4 moves! ('+state.moves.join(', ')+')';
+    if (isDoubles && state.moves.length===4) msg='ð¥ Double '+state.dice[0]+'s! 4 moves! ('+state.moves.join(', ')+')';
     else msg='Make a move ('+state.moves.join(', ')+')';
   }
   if (flashMsg) { msg = flashMsg; flashMsg=null; }
@@ -497,13 +497,13 @@ function flashIllegal(p, reason) {
 
 function onPointClick(p) {
   if (state.turn!==myColor || state.winner) return;
-  if (!state.rolled) { flashMsg='🎲 Roll the dice first!'; renderGame(); return; }
+  if (!state.rolled) { flashMsg='ð² Roll the dice first!'; renderGame(); return; }
   if (selected===null || selected===p) {
     // select
     if (state.bar[myColor]>0) { selected='bar'; renderGame(); return; }
     const slot = state.board[p];
     if (slot.color===myColor && slot.count>0) { selected=p; renderGame(); }
-    else if (slot.count>0) flashIllegal(p,'❌ That\'s not your checker!');
+    else if (slot.count>0) flashIllegal(p,'â That\'s not your checker!');
     return;
   }
   // try move
@@ -514,12 +514,12 @@ function onPointClick(p) {
   } else {
     const slot=state.board[p];
     if (slot.color && slot.color!==myColor && slot.count>=2) {
-      flashIllegal(p,'❌ Blocked — 2+ opponent checkers!');
+      flashIllegal(p,'â Blocked â 2+ opponent checkers!');
       selected=null;
     } else if (slot.color===myColor && slot.count>0 && state.bar[myColor]===0) {
       selected=p; // re-select own point
     } else {
-      flashIllegal(p,'❌ No die matches that distance.');
+      flashIllegal(p,'â No die matches that distance.');
       selected=null;
     }
   }
@@ -564,7 +564,7 @@ function applyMove(from, to) {
     }
     removeFrom(from,color);
     state.off[color]++;
-    flashMsg = '🎯 One off! ('+state.off[color]+'/15)';
+    flashMsg = 'ð¯ One off! ('+state.off[color]+'/15)';
     if (state.off[color]===15) { state.winner = color; flashMsg=null; }
   } else {
     pipUsed = color==='white' ? (from-to) : (to-from);
@@ -574,7 +574,7 @@ function applyMove(from, to) {
     if (slot.color && slot.color!==color && slot.count===1) {
       state.bar[slot.color]++;
       state.board[to]={color:null,count:0};
-      flashMsg = '💥 Sent to the bar!';
+      flashMsg = 'ð¥ Sent to the bar!';
     }
     placeOn(to,color);
   }
@@ -628,7 +628,7 @@ $('btnRoll').onclick = () => {
   state.moves = d1===d2 ? [d1,d1,d1,d1] : [d1,d2];
   state.rolled=true;
   renderGame();
-  if (!hasAnyMove()) { flashMsg='😬 No legal moves — turn skipped!'; endTurn(); renderGame(); }
+  if (!hasAnyMove()) { flashMsg='ð¬ No legal moves â turn skipped!'; endTurn(); renderGame(); }
   pushState();
 };
 $('btnPass').onclick = () => {
