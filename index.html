@@ -7,20 +7,20 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
-    --bg:#1b1208; --felt:#0f5132; --wood:#5b3a1e; --wood2:#7a4f29;
-    --light:#e9d7a4; --dark:#9c6b3a; --white:#f3ecd7; --black:#222;
-    --accent:#ffcc33; --bad:#c0392b;
+    --bg:#0a0e1a; --felt:#0c2d48; --wood:#1e3a5f; --wood2:#2b5278;
+    --light:#5b9bd5; --dark:#1a4a6e; --white:#f3ecd7; --black:#222;
+    --accent:#ffcc33; --bad:#e74c3c;
   }
   *{box-sizing:border-box;font-family:system-ui,Segoe UI,Roboto,sans-serif}
   body{margin:0;background:var(--bg);color:#eee;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px}
   h1{margin:4px 0 12px;font-size:22px;letter-spacing:1px}
-  .panel{background:#2b1d10;border:1px solid #7a4f29;border-radius:10px;padding:16px;max-width:520px;width:100%}
+  .panel{background:#0f1b2e;border:1px solid #2b5278;border-radius:10px;padding:16px;max-width:520px;width:100%}
   button{background:var(--accent);border:0;color:#1b1208;font-weight:700;padding:10px 16px;border-radius:6px;cursor:pointer;font-size:14px}
   button:disabled{opacity:.5;cursor:not-allowed}
   button.ghost{background:transparent;border:1px solid var(--accent);color:var(--accent)}
-  input{padding:10px;border-radius:6px;border:1px solid #7a4f29;background:#1b1208;color:#eee;font-size:16px;width:100%;text-transform:uppercase;letter-spacing:2px;text-align:center}
+  input{padding:10px;border-radius:6px;border:1px solid #2b5278;background:#0a0e1a;color:#eee;font-size:16px;width:100%;text-transform:uppercase;letter-spacing:2px;text-align:center}
   .row{display:flex;gap:8px;margin-top:10px}
-  .code{font-family:ui-monospace,Menlo,monospace;font-size:28px;letter-spacing:6px;background:#1b1208;padding:10px;border-radius:8px;text-align:center;color:var(--accent)}
+  .code{font-family:ui-monospace,Menlo,monospace;font-size:28px;letter-spacing:6px;background:#0a0e1a;padding:10px;border-radius:8px;text-align:center;color:var(--accent)}
   .status{margin:8px 0;min-height:20px;font-size:14px;color:#ddd}
   .err{color:var(--bad)}
   /* Board */
@@ -51,7 +51,9 @@
   .point.bot::before{bottom:0;height:90%;border-bottom:calc(260px - 8px) solid var(--light)}
   .point.top.dark::before{border-top-color:var(--dark)}
   .point.bot.dark::before{border-bottom-color:var(--dark)}
-  .point .num{position:absolute;font-size:10px;color:#000;opacity:.6;z-index:3}
+  .point .num{position:absolute;font-size:10px;color:#000;opacity:.6;z-index:3;pointer-events:none}
+  @keyframes flash-red{0%{background:rgba(231,76,60,.5)}100%{background:transparent}}
+  .point.illegal-flash{animation:flash-red .45s ease-out}
   .point.top .num{top:2px}
   .point.bot .num{bottom:2px}
   .checkers{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;pointer-events:none;margin-top:2px;margin-bottom:2px}
@@ -76,9 +78,14 @@
   .die{width:40px;height:40px;border-radius:6px;background:#f3ecd7;color:#000;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;border:2px solid #000}
   .die.used{opacity:.35}
   .legend{font-size:12px;color:#ccc}
-  .turnbadge{padding:4px 10px;border-radius:20px;font-weight:700;font-size:12px}
+  .turnbadge{padding:6px 14px;border-radius:20px;font-weight:700;font-size:16px}
   .turnbadge.white{background:#f3ecd7;color:#000}
   .turnbadge.black{background:#222;color:#fff;border:1px solid #666}
+  .board.my-white{box-shadow:0 0 18px 4px rgba(243,236,215,.45)}
+  .board.my-black{box-shadow:0 0 18px 4px rgba(100,100,100,.45)}
+  @keyframes pulse-border{0%,100%{box-shadow:0 0 18px 4px rgba(255,204,51,.25)}50%{box-shadow:0 0 28px 8px rgba(255,204,51,.55)}}
+  .board.my-turn{animation:pulse-border 1.8s ease-in-out infinite}
+  .color-callout{font-size:15px;margin:8px 0;text-align:center;font-weight:700;letter-spacing:1px}
   @media (max-width:640px){
     .board{height:380px}
     .checker{width:22px;height:22px}
@@ -103,6 +110,7 @@
   <div id="waiting" style="display:none">
     <div class="legend">Game code — share with your opponent:</div>
     <div id="gameCode" class="code">------</div>
+    <div class="color-callout">You are playing as ⚪ WHITE</div>
     <div class="status">Waiting for opponent to join…</div>
     <button id="btnCancel" class="ghost" style="width:100%">Cancel</button>
   </div>
@@ -167,7 +175,6 @@ function initialState() {
     moves: [],          // remaining pip values
     rolled: false,
     winner: null,
-    seq: 0,             // bumped on every local mutation to detect stale remote echoes
   };
 }
 
@@ -206,6 +213,7 @@ async function joinGame() {
   const { data, error } = await sb.from(TABLE).select('*').eq('id', code).maybeSingle();
   if (error || !data) { $('lobbyStatus').textContent="Game not found"; $('lobbyStatus').className="status err"; return; }
   if (data.status !== 'waiting') { $('lobbyStatus').textContent="Game already started"; $('lobbyStatus').className="status err"; return; }
+  $('lobbyStatus').innerHTML='<span class="color-callout">You are playing as ⚫ BLACK</span>';
   gameId = code; myColor='black'; state = data.state;
   const { error: uerr } = await sb.from(TABLE).update({ status:'playing', state }).eq('id', code);
   if (uerr) { $('lobbyStatus').textContent="Error: "+uerr.message; $('lobbyStatus').className="status err"; return; }
@@ -254,23 +262,13 @@ function applyRemote(row) {
     if ($('gameScreen').style.display === 'none') enterGame();
   }
   if (row.status === 'playing' && state) {
-    // Only accept remote state if it's strictly newer than our local state.
-    // This prevents a poll that fetches pre-push data from clobbering an
-    // optimistic local move.
-    const localSeq  = state.seq  || 0;
-    const remoteSeq = (row.state && row.state.seq) || 0;
-    if (remoteSeq > localSeq) {
-      state = row.state;
-      renderGame();
-    } else if (remoteSeq === localSeq && state.turn !== myColor) {
-      // Opponent's turn, same seq — safe to re-sync (no local edits in flight).
-      state = row.state;
-      renderGame();
-    }
-    // else: our local state is ahead; ignore stale remote echo.
+    const oldBar = state.bar[myColor];
+    state = row.state;
+    if (state.bar[myColor] > oldBar) flashMsg = '😤 Hit! You\'re on the bar.';
+    renderGame();
   }
   if (row.state && row.state.winner) {
-    const msg = row.state.winner === myColor ? "You win!" : "You lose.";
+    const msg = row.state.winner === myColor ? "🎉🏆 You win! 🏆🎉" : "😔 You lose. Better luck next time!";
     showOver(msg);
     stopPolling();
   }
@@ -304,16 +302,24 @@ function renderGame() {
   drawBoard();
   // status
   let msg='';
-  if (state.winner) msg = (state.winner===myColor?'You win!':'You lose.');
-  else if (!myTurn) msg = 'Waiting for opponent…';
-  else if (!state.rolled) msg='Your turn — roll the dice.';
-  else if (state.moves.length===0) msg='No moves left — end turn.';
-  else msg='Make a move ('+state.moves.join(', ')+')';
+  if (state.winner) msg = (state.winner===myColor?'🎉🏆 You win! 🏆🎉':'😔 You lose. Better luck next time!');
+  else if (!myTurn) msg = '⏳ Waiting for opponent…';
+  else if (!state.rolled) msg='🎲 Your turn — roll the dice!';
+  else if (state.moves.length===0) msg='😬 No moves left — turn ending.';
+  else {
+    const isDoubles = state.dice.length===2 && state.dice[0]===state.dice[1];
+    if (isDoubles && state.moves.length===4) msg='🔥 Double '+state.dice[0]+'s! 4 moves! ('+state.moves.join(', ')+')';
+    else msg='Make a move ('+state.moves.join(', ')+')';
+  }
+  if (flashMsg) { msg = flashMsg; flashMsg=null; }
   $('gameStatus').textContent = msg;
 }
 
 function drawBoard() {
   const b = $('board'); b.innerHTML='';
+  b.classList.remove('my-white','my-black','my-turn');
+  if (myColor) b.classList.add('my-'+myColor);
+  if (state.turn===myColor && !state.winner) b.classList.add('my-turn');
   // Layout:
   // Row1 (top):    off-bar? | quad top-left (13..18) | bar | quad top-right (19..24) | off
   // Row2 (bottom): off-bar? | quad bot-left (12..7)  | bar | quad bot-right (6..1)   | off
@@ -482,26 +488,22 @@ function isLegalDest(dest) {
   return legals.has(dest);
 }
 
-let flashTimer = null;
-function flash(msg) {
-  const el = $('gameStatus');
-  if (!el) return;
-  el.textContent = msg;
-  el.style.color = 'var(--bad)';
-  if (flashTimer) clearTimeout(flashTimer);
-  flashTimer = setTimeout(() => { el.style.color=''; renderGame(); }, 1500);
+function flashIllegal(p, reason) {
+  const el = document.querySelector('[data-point="'+p+'"]');
+  if (el) { el.classList.remove('illegal-flash'); void el.offsetWidth; el.classList.add('illegal-flash'); }
+  flashMsg = reason;
+  renderGame();
 }
 
 function onPointClick(p) {
-  if (state.winner) return;
-  if (state.turn !== myColor) { flash("Not your turn"); return; }
-  if (!state.rolled)          { flash("Roll the dice first"); return; }
+  if (state.turn!==myColor || state.winner) return;
+  if (!state.rolled) { flashMsg='🎲 Roll the dice first!'; renderGame(); return; }
   if (selected===null || selected===p) {
     // select
     if (state.bar[myColor]>0) { selected='bar'; renderGame(); return; }
     const slot = state.board[p];
-    if (slot.color===myColor && slot.count>0) { selected=p; renderGame(); return; }
-    flash("Select one of your checkers");
+    if (slot.color===myColor && slot.count>0) { selected=p; renderGame(); }
+    else if (slot.count>0) flashIllegal(p,'❌ That\'s not your checker!');
     return;
   }
   // try move
@@ -509,21 +511,21 @@ function onPointClick(p) {
   if (legals.has(p)) {
     applyMove(selected,p);
     selected=null;
-    renderGame();
-    maybeEndTurn();
-    pushState();
-    return;
-  }
-  // illegal — give feedback, then re-select if own point
-  const slot=state.board[p];
-  if (slot.color===myColor && slot.count>0 && state.bar[myColor]===0) {
-    selected=p;
-    renderGame();
   } else {
-    selected=null;
-    renderGame();
-    flash("Illegal move");
+    const slot=state.board[p];
+    if (slot.color && slot.color!==myColor && slot.count>=2) {
+      flashIllegal(p,'❌ Blocked — 2+ opponent checkers!');
+      selected=null;
+    } else if (slot.color===myColor && slot.count>0 && state.bar[myColor]===0) {
+      selected=p; // re-select own point
+    } else {
+      flashIllegal(p,'❌ No die matches that distance.');
+      selected=null;
+    }
   }
+  renderGame();
+  maybeEndTurn();
+  pushState();
 }
 
 function onOffClick(color) {
@@ -562,7 +564,8 @@ function applyMove(from, to) {
     }
     removeFrom(from,color);
     state.off[color]++;
-    if (state.off[color]===15) state.winner = color;
+    flashMsg = '🎯 One off! ('+state.off[color]+'/15)';
+    if (state.off[color]===15) { state.winner = color; flashMsg=null; }
   } else {
     pipUsed = color==='white' ? (from-to) : (to-from);
     removeFrom(from,color);
@@ -571,6 +574,7 @@ function applyMove(from, to) {
     if (slot.color && slot.color!==color && slot.count===1) {
       state.bar[slot.color]++;
       state.board[to]={color:null,count:0};
+      flashMsg = '💥 Sent to the bar!';
     }
     placeOn(to,color);
   }
@@ -624,7 +628,7 @@ $('btnRoll').onclick = () => {
   state.moves = d1===d2 ? [d1,d1,d1,d1] : [d1,d2];
   state.rolled=true;
   renderGame();
-  if (!hasAnyMove()) { endTurn(); renderGame(); }
+  if (!hasAnyMove()) { flashMsg='😬 No legal moves — turn skipped!'; endTurn(); renderGame(); }
   pushState();
 };
 $('btnPass').onclick = () => {
@@ -637,30 +641,25 @@ $('btnPass').onclick = () => {
 /* ===========================================================
    Persist state
 =========================================================== */
-let pushing=false, pendingPush=false;
+let flashMsg=null;
+let pushing=false;
 async function pushState() {
-  if (!gameId || !state) return;
-  // bump seq so remote echoes of older state don't overwrite us
-  state.seq = (state.seq || 0) + 1;
-  if (pushing) { pendingPush = true; return; }
-  pushing = true;
+  if (!gameId) return;
+  if (pushing) return;
+  pushing=true;
   try {
-    do {
-      pendingPush = false;
-      await sb.from(TABLE).update({ state, status: state.winner ? 'finished' : 'playing' }).eq('id', gameId);
-    } while (pendingPush);
-  } finally {
-    pushing = false;
-  }
+    await sb.from(TABLE).update({ state, status: state.winner ? 'finished' : 'playing' }).eq('id', gameId);
+  } finally { pushing=false; }
 }
 
 /* ===========================================================
    Wire up lobby buttons
 =========================================================== */
 $('btnCreate').onclick = createGame;
-$('btnJoin').onclick   = joinGame;
+$('btnJoin').onclick   = () => joinGame();
 $('btnCancel').onclick = cancelGame;
 $('joinCode').addEventListener('input', e => e.target.value = e.target.value.toUpperCase());
+$('joinCode').addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); joinGame(); } });
 
 showLobby();
 </script>
