@@ -66,6 +66,7 @@
   }
   .checker.white{background:radial-gradient(circle at 30% 30%,#fff,#c9bfa3)}
   .checker.black{background:radial-gradient(circle at 30% 30%,#555,#111)}
+  .checker.mine{box-shadow:0 0 6px 2px var(--accent), 0 1px 2px rgba(0,0,0,.6) inset;border-color:var(--accent)}
   .checker.count{display:flex;align-items:center;justify-content:center;color:#000;font-weight:700;font-size:12px;background:radial-gradient(circle at 30% 30%,#fff,#c9bfa3)}
   .checker.count.black{color:#fff;background:radial-gradient(circle at 30% 30%,#555,#111)}
   .point.selected::after{content:"";position:absolute;inset:0;background:rgba(255,204,51,.25);z-index:1}
@@ -262,10 +263,15 @@ function applyRemote(row) {
     if ($('gameScreen').style.display === 'none') enterGame();
   }
   if (row.status === 'playing' && state) {
-    const oldBar = state.bar[myColor];
-    state = row.state;
-    if (state.bar[myColor] > oldBar) flashMsg = 'Hit! You\'re on the bar.';
-    renderGame();
+    const remote = row.state;
+    // Only apply remote state when it is the OPPONENT's turn (or turn just changed).
+    // This prevents polling from overwriting local dice rolls / moves during our turn.
+    if (remote.turn !== myColor || state.turn !== myColor) {
+      const oldBar = state.bar[myColor];
+      state = remote;
+      if (state.bar[myColor] > oldBar) flashMsg = 'Hit! You\'re on the bar.';
+      renderGame();
+    }
   }
   if (row.state && row.state.winner) {
     const msg = row.state.winner === myColor ? "You win!" : "You lose. Better luck next time!";
@@ -366,6 +372,7 @@ function quad(pos, points) {
       const max = Math.min(slot.count,5);
       for (let i=0;i<max;i++){
         const c=document.createElement('div'); c.className='checker '+slot.color;
+        if (slot.color===myColor) c.classList.add('mine');
         if (i===max-1 && slot.count>5){ c.classList.add('count'); if(slot.color==='black')c.classList.add('black'); c.textContent=slot.count; }
         ch.appendChild(c);
       }
@@ -387,6 +394,7 @@ function barCell(pos) {
   const count = state.bar[color];
   for (let i=0;i<Math.min(count,5);i++){
     const c=document.createElement('div'); c.className='checker '+color;
+    if (color===myColor) c.classList.add('mine');
     if (i===4 && count>5){ c.classList.add('count'); if(color==='black')c.classList.add('black'); c.textContent=count;}
     group.appendChild(c);
   }
